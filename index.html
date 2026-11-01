@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#071411" />
+  <meta name="description" content="Sporefall — a hand-painted platformer. Fight monsters, gather mushrooms, forge armor, and topple three mushroom kings." />
+  <title>Sporefall — A Mushroom Knight's Tale</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230c1c17'/%3E%3Cpath d='M32 10c14 0 22 9 22 17H10c0-8 8-17 22-17z' fill='%23e76f51'/%3E%3Ccircle cx='23' cy='18' r='3' fill='%23ffe9c2'/%3E%3Ccircle cx='41' cy='20' r='2.4' fill='%23ffe9c2'/%3E%3Cpath d='M26 27h12v13c0 5-12 5-12 0z' fill='%23e8dcc0'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <canvas id="stage" aria-label="Sporefall game world"></canvas>
+
+  <div id="hud" class="hud hidden">
+    <div class="hud-left">
+      <div id="hearts" class="hearts" aria-label="Health"></div>
+      <div class="hud-meta">
+        <span class="spore-chip"><span class="spore-glyph" aria-hidden="true"></span><span id="sporeCount">0</span></span>
+        <span id="armorName" class="armor-name">Wayfarer's tunic</span>
+      </div>
+    </div>
+    <div class="hud-center"><span class="chapter-mark" aria-hidden="true">✦</span><span id="levelName">Mossgrove</span></div>
+    <div class="hud-right">
+      <button id="muteBtn" class="icon-btn" aria-label="Mute sound" aria-pressed="false">♪</button>
+      <button id="pauseBtn" class="icon-btn" aria-label="Pause">II</button>
+    </div>
+    <div id="bossWrap" class="boss hidden">
+      <div class="boss-head"><span class="boss-kicker">Guardian</span><span id="bossName">The Slime King</span></div>
+      <div class="boss-track"><i id="bossFill"></i></div>
+    </div>
+    <div id="prompt" class="prompt hidden">E · Enter the Lantern Forge</div>
+  </div>
+
+  <div id="touch" aria-hidden="true">
+    <div class="touch-move">
+      <button class="touch-btn move" data-action="left" aria-label="Move left">◀</button>
+      <button class="touch-btn move" data-action="right" aria-label="Move right">▶</button>
+    </div>
+    <div class="touch-actions">
+      <button class="touch-btn small" data-action="interact" aria-label="Interact">E</button>
+      <button class="touch-btn med" data-action="dash" aria-label="Dash">»</button>
+      <button class="touch-btn med" data-action="attack" aria-label="Attack">⚔</button>
+      <button class="touch-btn big" data-action="jump" aria-label="Jump">↑</button>
+    </div>
+  </div>
+
+  <section id="title" class="screen title-screen">
+    <div class="title-glow" aria-hidden="true"></div>
+    <div class="title-inner">
+      <p class="eyebrow">A mushroom knight's tale</p>
+      <h1 class="logo">Spore<span>fall</span></h1>
+      <p class="tagline">The grove is rotting from the roots. Gather its light, forge what armor you can, and cut a path to the crown.</p>
+      <div class="title-actions">
+        <button id="playBtn" class="btn btn-primary">Play</button>
+        <button id="continueBtn" class="btn btn-ghost hidden">Continue</button>
+      </div>
+      <div class="controls-card">
+        <span><kbd>A</kbd><kbd>D</kbd> move</span>
+        <span><kbd>Space</kbd> jump</span>
+        <span><kbd>J</kbd> strike</span>
+        <span><kbd>Shift</kbd> dash</span>
+        <span><kbd>E</kbd> forge</span>
+      </div>
+      <p class="credit">Mushrooms are coin. Armor is memory. Three guardians stand in your way.</p>
+    </div>
+  </section>
+
+  <div id="shop" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="shopTitle">
+    <div class="panel shop-panel">
+      <div class="panel-head">
+        <p class="eyebrow">The Lantern Forge</p>
+        <h2 id="shopTitle">Armor of the grove</h2>
+        <p class="panel-sub">Spend spores you have gathered. Each set is worn over the last, and each is a little harder to kill.</p>
+      </div>
+      <div class="balance"><span class="spore-glyph" aria-hidden="true"></span><span id="shopSpores">0</span><span class="balance-label">spores</span></div>
+      <p id="shopNotice" class="shop-notice" role="status" aria-live="polite"></p>
+      <div id="armorList" class="armor-list"></div>
+      <button id="shopClose" class="btn btn-ghost panel-close">Back to the wilds <kbd>Esc</kbd></button>
+    </div>
+  </div>
+
+  <div id="pause" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="pauseTitle">
+    <div class="panel pause-panel">
+      <p class="eyebrow">A breath between steps</p>
+      <h2 id="pauseTitle">Rest at the lantern</h2>
+      <p class="panel-sub">The grove waits. Your spores are safe.</p>
+      <div class="pause-actions">
+        <button id="resumeBtn" class="btn btn-primary">Resume</button>
+        <button id="quitBtn" class="btn btn-ghost">Return to title</button>
+      </div>
+      <div class="controls-card stacked">
+        <span><kbd>A</kbd><kbd>D</kbd> or <kbd>←</kbd><kbd>→</kbd> move</span>
+        <span><kbd>Space</kbd> jump · <kbd>J</kbd> strike</span>
+        <span><kbd>Shift</kbd> dash · <kbd>E</kbd> interact</span>
+      </div>
+      <p class="panel-foot">Falling returns you to the last lantern. Nothing is lost.</p>
+    </div>
+  </div>
+
+  <div id="clear" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="clearTitle">
+    <div class="panel clear-panel">
+      <p id="clearKicker" class="eyebrow">Guardian felled</p>
+      <h2 id="clearTitle">Mossgrove</h2>
+      <p id="clearText" class="panel-sub">The way ahead opens.</p>
+      <div id="clearStats" class="stat-grid"></div>
+      <button id="clearNext" class="btn btn-primary">Onward</button>
+    </div>
+  </div>
+
+  <section id="victory" class="screen victory-screen hidden">
+    <div class="victory-inner">
+      <p class="eyebrow">The crown is quiet</p>
+      <h2 class="victory-title">The grove remembers.</h2>
+      <p class="tagline">The Monarch has fallen. Spores drift over the summit like slow, golden snow — and somewhere below, the roots begin to breathe again.</p>
+      <div id="victoryStats" class="stat-grid"></div>
+      <div class="victory-actions">
+        <button id="againBtn" class="btn btn-primary">Play again</button>
+        <button id="menuBtn" class="btn btn-ghost">Title screen</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="levelCard" class="level-card hidden">
+    <span id="levelCardNumber">Chapter I</span>
+    <h2 id="levelCardName">Mossgrove</h2>
+    <p id="levelCardSub">Where the first spores fall</p>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
